@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# En los PR, un push nuevo cancela la ejecución anterior de la misma rama.
+# En main no se cancela: cada push a main debe quedar verificado.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: backend (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.12: mínimo del proyecto (requires-python). 3.13: versión de desarrollo local.
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Formato (ruff format --check)
+        run: ruff format --check .
+
+      - name: Tipos (mypy)
+        run: mypy
+
+      # Perfil "ci" de Hypothesis (tests/conftest.py): 2000 ejemplos, sin deadline.
+      # Los tests marcados "integration" requieren PostgreSQL y se omiten hasta tener BD en el CI.
+      - name: Tests (pytest)
+        run: pytest -m "not integration" --hypothesis-profile=ci

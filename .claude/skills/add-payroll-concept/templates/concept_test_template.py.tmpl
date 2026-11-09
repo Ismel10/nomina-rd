@@ -1,0 +1,38 @@
+"""Plantilla de test para un concepto de nómina.
+
+Copiar a backend/tests/unit/engine/concepts/test_<codigo>.py y reemplazar los <PLACEHOLDERS>.
+Los datos del empleado son FICTICIOS. Los montos esperados se calculan a mano y la hoja de
+cálculo queda en el docstring de cada test.
+"""
+
+from decimal import Decimal
+
+# from nomina.engine import calculate_concept            # <- ajustar al API real del motor
+# from tests.unit.engine.factories import make_context   # <- fixtures de empleados ficticios
+
+
+def test_<codigo>_caso_base_calculado_a_mano() -> None:
+    """<CODIGO>: caso base.
+
+    Hoja de cálculo manual:
+        Salario mensual ............. 30,000.00
+        Base (<descripción>) ........ 30,000.00
+        Tasa ........................ <tasa>        (tabla <nombre> v<versión>, vigente desde <fecha>)
+        Monto sin redondear ......... <valor exacto>
+        Redondeo HALF_UP a 0.01 ..... <valor>
+    Fuente: docs/normativa/fuentes.md#<ancla>
+    """
+    # ctx = make_context(monthly_salary=Decimal("30000.00"), pay_date=date(2026, 1, 31))
+    # line = calculate_concept("<CODIGO>", ctx)
+    expected = Decimal("<valor>")
+    # assert line.amount == expected            # igualdad exacta: tolerancia cero
+    # assert line.table_version == "<versión>"
+    assert isinstance(expected, Decimal)
+
+
+def test_<codigo>_respeta_tope() -> None:
+    """<CODIGO>: salario por encima del tope cotizable, así que la base queda topada."""
+
+
+def test_<codigo>_prorrateo_ingreso_a_mitad_de_periodo() -> None:
+    """<CODIGO>: empleado que ingresa a mitad del periodo."""

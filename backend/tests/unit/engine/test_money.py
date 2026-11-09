@@ -101,6 +101,13 @@ def test_round_line_casos_calculados_a_mano(raw: str, expected: str) -> None:
     assert result.as_tuple().exponent == -2
 
 
+def test_round_line_no_produce_cero_negativo() -> None:
+    # Decimal.quantize daría "-0.00", que se vería así en un volante. Se normaliza a "0.00".
+    result = round_line(Decimal("-0.004"))
+    assert str(result) == "0.00"
+    assert not result.is_signed()
+
+
 def test_round_line_precision_intermedia_completa_y_redondeo_solo_al_final() -> None:
     """Hoja de cálculo manual (tasa FICTICIA, solo ilustra la mecánica):
 

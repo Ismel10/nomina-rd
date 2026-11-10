@@ -173,7 +173,10 @@ tocó el frontend, también `npm run lint`, `npm run typecheck` y `npm test`.
 
 ## 7. Testing
 
-- **TDD en el motor:** primero el test con el resultado esperado, después el código.
+- **TDD en el motor (obligatorio):** primero el test con el resultado esperado, verlo fallar, y
+  después el código. Aplica a **todo** comportamiento nuevo, incluidos los casos borde que descubras
+  mientras implementas (p. ej. `-0.00`): detente, escribe su test, verifica que falla y luego
+  impleméntalo. Escribir test y código juntos, o el test después, es saltarse TDD (ver §8).
 - **Casos calculados a mano:** cada concepto tiene al menos un caso con la hoja de cálculo manual
   documentada en el test (base, tasa, tope, redondeo). **Tolerancia cero:** se compara `Decimal`
   exacto al centavo.
@@ -186,6 +189,13 @@ tocó el frontend, también `npm run lint`, `npm run typecheck` y `npm test`.
 
 ## 8. Cómo trabajar conmigo
 
+- **No te saltes las reglas sin preguntar.** Si vas a desviarte de cualquier regla de este archivo
+  (TDD, alcance pedido, reglas de negocio, convenciones o flujo de Git), **detente y pregúntame
+  antes**, explicando qué regla, por qué y qué alternativa propones. No sigas hasta tener mi
+  respuesta. Si te das cuenta después de que ya te la saltaste, dilo explícitamente en el reporte
+  final y propón cómo corregirlo.
+- **No amplíes el alcance por tu cuenta.** Si ves algo útil que no se pidió (un caso borde, una
+  validación, un refactor), propónlo y espera mi visto bueno, o sugiérelo como un issue aparte.
 - **Plan primero** en cambios que toquen más de un módulo, el esquema de BD o reglas de cálculo:
   propón el plan y espera el visto bueno.
 - **No inventes normativa.** Si no tienes certeza de una tasa, tope, exención o criterio legal,

@@ -57,8 +57,8 @@ Las tasas, topes y escalas **no van en el código ni en este archivo**: viven en
    - Frontend: nunca `Number` para hacer aritmética con montos.
    - **Redondeo:** a 2 decimales con `ROUND_HALF_UP`, **una vez por línea de concepto**, solo en
      `engine/money.py`. Los intermedios van a precisión completa. Los totales son la suma de líneas
-     ya redondeadas; nunca se redondea el total aparte.
-     `TODO(verificar-normativa)`: confirmar el criterio de redondeo de DGII y TSS.
+     ya redondeadas; nunca se redondea el total aparte. Criterio y fuentes: ADR 0001
+     (`docs/decisiones/0001-criterio-de-redondeo.md`).
 2. **Tablas con vigencia.** Toda tasa, tope o escala tiene `valid_from`/`valid_to`, y el motor recibe
    las tablas vigentes en la **fecha de pago** del periodo. Un cálculo histórico se reproduce
    idéntico con las tablas de su fecha. Las tablas publicadas no se editan: se crea una versión nueva.

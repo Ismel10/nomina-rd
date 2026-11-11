@@ -15,8 +15,8 @@ Por qué existe este módulo (AGENTS.md §3.1):
 
 Los mensajes de error **nunca incluyen el monto** (dato sensible, AGENTS.md §3.6).
 
-TODO(verificar-normativa): confirmar el criterio de redondeo de DGII y TSS (modo HALF_UP a 2
-decimales y si se aplica por línea o sobre la base). No cambiar el criterio sin esa confirmación.
+Criterio de redondeo: ADR 0001 (docs/decisiones/0001-criterio-de-redondeo.md). Half up a 2
+decimales para todos los montos, según el criterio de e-CF de la DGII; la TSS no publica uno propio.
 """
 
 from collections.abc import Iterable
@@ -28,7 +28,7 @@ CENT: Final = Decimal("0.01")
 
 ROUNDING_MODE: Final = ROUND_HALF_UP
 """Modo de redondeo de las líneas. En el empate (medio centavo exacto) se aleja de cero:
-0.005 -> 0.01 y -0.005 -> -0.01. TODO(verificar-normativa): confirmar con DGII/TSS."""
+0.005 -> 0.01 y -0.005 -> -0.01. Ver ADR 0001."""
 
 _ZERO: Final = Decimal("0.00")
 

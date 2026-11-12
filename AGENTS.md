@@ -10,7 +10,9 @@ empresas cliente en **República Dominicana**. Es un proyecto de portafolio: se 
 corrección, trazabilidad y claridad por encima de la cantidad de funciones.
 
 **MVP**
-- Empresas cliente, empleados y contratos (salario fijo; pago quincenal o mensual).
+- Empresas cliente, empleados y contratos: salario fijo mensual o pago por horas (horas resumidas
+  como novedad del periodo); pago quincenal o mensual. La forma de pagar (ausencias, grupos,
+  tarifas, prorrateo) la configura cada empresa en su política de pago, no el código.
 - Motor de cálculo: salario ordinario, horas extra, retenciones de ley del empleado (AFP, SFS, ISR),
   aportes patronales (AFP, SFS, SRL, INFOTEP) y descuentos voluntarios simples (préstamo, anticipo).
 - Ciclo del periodo `abierto → calculado → revisado → cerrado`; correcciones con ajustes posteriores.
@@ -19,7 +21,9 @@ corrección, trazabilidad y claridad por encima de la cantidad de funciones.
 
 **Fuera del MVP (por ahora):** archivos oficiales TSS (SUIR+) y DGII (IR-3, IR-13), formatos
 propietarios por banco, salario de Navidad y vacaciones (siguiente fase), prestaciones laborales
-(preaviso, cesantía), bonificación (participación en beneficios), multimoneda, SSO, portal del empleado.
+(preaviso, cesantía), bonificación (participación en beneficios), multimoneda, SSO, portal del empleado,
+jornada parcial, jornada reducida de trabajos peligrosos, licencias cubiertas por subsidio (SISALRIL)
+y prorrateo por días laborables (requiere calendario de feriados).
 
 ## 2. Dominio y glosario
 
@@ -30,6 +34,13 @@ Código en inglés; la UI y la documentación, en español. Este glosario es el 
 | Empresa cliente | `Company` (tenant) | Empleador al que la firma le lleva la nómina. Se identifica por su **RNC**. |
 | Empleado | `Employee` | Persona con **cédula** (o pasaporte) y **NSS**. Pertenece a una sola empresa. |
 | Contrato de trabajo | `Contract` | Condiciones vigentes: salario, frecuencia de pago, tipo (indefinido / obra o servicio), fechas. Se versiona por vigencia. |
+| Esquema de pago | `PayScheme` | Cómo se paga el contrato: `FIXED_SALARY` (salario mensual fijo; la quincena es la mitad) o `HOURLY` (horas × tarifa). |
+| Política de pago | `PayrollPolicy` | Configuración de pago de una empresa, **con vigencia**: divisor del salario diario, horas de jornada, método de prorrateo, categoría de salario mínimo, reglas de ausencia y grupos. |
+| Grupo de empleados | `EmployeeGroup` | Agrupación configurable por empresa (jerarquía, departamento, turno…) con reglas propias. Un contrato pertenece a un grupo como máximo. |
+| Tipo de ausencia / regla de ausencia | `AbsenceRule` | Código configurable por empresa con su **porcentaje de pago** (`pay_ratio` entre 0 y 1: 1 = se paga completa, 0 = se descuenta completa). |
+| Resolución en cascada | `resolve_absence_ratio` | Se usa la regla más específica: contrato → grupo → empresa. Si no hay ninguna, es error; nunca un valor por defecto. |
+| Método de prorrateo | `ProrationMethod` | Cómo se prorratea el salario por ingreso o salida: `CALENDAR_FRACTION` o `COMMERCIAL_30` (ADR 0002). |
+| Licencia legal | `LegalLeave` | Licencia definida por ley: pagada por el empleador (art. 54, con máximo de días) o cubierta por subsidio (fuera del MVP). |
 | Periodo de nómina | `PayrollPeriod` | Rango de fechas de una frecuencia. Estados: `open`, `calculated`, `reviewed`, `closed`. |
 | Concepto | `Concept` | Regla que produce una línea del volante. Tipos: `earning`, `deduction`, `employer_contribution`. |
 | Ingreso (percepción) | `earning` | Suma al bruto: salario ordinario, horas extra, comisiones… |
@@ -37,11 +48,11 @@ Código en inglés; la UI y la documentación, en español. Este glosario es el 
 | Aporte patronal | `employer_contribution` | Costo del empleador que no afecta el neto: AFP, SFS y SRL patronales, INFOTEP. |
 | Salario cotizable | `contributable_base` | Base sobre la que se calculan los aportes TSS, sujeta a **topes**. |
 | Salario gravable (ISR) | `taxable_base` | Base para el ISR después de las exenciones y deducciones de ley. |
-| Novedad / incidencia | `Incidence` | Hecho del periodo que altera el cálculo: horas extra, ausencias, licencias, entradas y salidas. |
+| Novedad / incidencia | `Incidence` (ausencias: `Absence`) | Hecho del periodo que altera el cálculo: horas extra, ausencias, licencias, entradas y salidas. Llega resumida (p. ej. días de ausencia por tipo). |
 | Volante de pago (recibo) | `Payslip` | Detalle por empleado y periodo: líneas, totales y referencias de tabla. |
 | Dispersión bancaria | `BankDisbursement` | Archivo de pagos netos para el banco de la empresa. |
 | Ajuste | `Adjustment` | Corrección de un periodo cerrado, aplicada en un periodo posterior abierto. Referencia al periodo origen. |
-| Tabla de tasas | `RateTable` | Escala ISR (DGII), tasas y topes TSS, salario mínimo. Todas tienen `valid_from` y `valid_to`. |
+| Tablas legales | `RateTables` | Conjunto de tablas versionadas, cada una con `valid_from` y `valid_to`: salario mínimo **mensual** por categoría, jornada máxima, licencias legales y, en pasos posteriores, TSS, ISR y recargos. |
 | TSS / SDSS | — | Tesorería de la Seguridad Social (Ley 87-01). Recauda AFP, SFS y SRL. |
 | DGII | — | Dirección General de Impuestos Internos. Retención de ISR a asalariados. |
 
@@ -62,6 +73,8 @@ Las tasas, topes y escalas **no van en el código ni en este archivo**: viven en
 2. **Tablas con vigencia.** Toda tasa, tope o escala tiene `valid_from`/`valid_to`, y el motor recibe
    las tablas vigentes en la **fecha de pago** del periodo. Un cálculo histórico se reproduce
    idéntico con las tablas de su fecha. Las tablas publicadas no se editan: se crea una versión nueva.
+   La **política de pago** de cada empresa (`PayrollPolicy`) sigue la misma regla: tiene vigencia y
+   se elige por la fecha de pago del periodo.
 3. **Un periodo cerrado es inmutable.** No hay `UPDATE` ni `DELETE` sobre periodos `closed`, ni sobre
    sus volantes y líneas: lo garantizan el servicio y un trigger de BD. Las correcciones se hacen
    con `Adjustment` en un periodo posterior.
@@ -129,9 +142,10 @@ nomina-rd/
 importa la biblioteca estándar (`decimal`, `dataclasses`, `datetime`, `enum`, `typing`) y su propio
 paquete. Lo verifica `tests/architecture/`.
 
-**Contrato del motor:** `calculate(inputs, tables) -> PayrollResult`, una función pura y determinista.
-Las tablas **se inyectan**; el motor nunca las busca. Cada línea del resultado lleva trazabilidad:
-código de concepto, base, tasa, versión de tabla y monto.
+**Contrato del motor:** `calculate(inputs, tables, policy) -> PayrollResult`, una función pura y
+determinista. Las tablas legales y la política de la empresa **se inyectan**; el motor nunca las
+busca. Cada línea del resultado lleva trazabilidad: código de concepto, tipo, base, cantidad o tasa,
+versión de tabla o de política, nivel del que salió la regla (contrato, grupo o empresa) y monto.
 
 ## 5. Comandos
 

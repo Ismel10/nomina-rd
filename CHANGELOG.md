@@ -16,6 +16,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
   política de pago por empresa con vigencia, grupos de empleados, reglas de ausencia resueltas en
   cascada (contrato → grupo → empresa), tablas legales (salario mínimo mensual, jornada máxima,
   licencias) y validación de la política. ADR 0002: métodos de prorrateo (#15).
+- `engine/proration.py`: forma estándar del periodo (quincenas 1–15 y 16–fin de mes; mes
+  calendario) y prorrateo del salario fijo con `CALENDAR_FRACTION` y `COMMERCIAL_30` (#17).
 
 ### Cambiado
 - `AGENTS.md`: TDD obligatorio también para los casos borde descubiertos al implementar (§7), y

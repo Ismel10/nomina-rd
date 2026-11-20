@@ -12,3 +12,8 @@ class PayrollConfigError(ValueError):
 
 class PayrollInputError(ValueError):
     """Los datos de entrada del cálculo (periodo, contrato, novedades) son inconsistentes."""
+
+
+class PayrollUnsupportedError(PayrollInputError):
+    """La entrada es válida pero el MVP no la soporta (p. ej. una licencia cubierta por subsidio
+    SISALRIL). Es un error explícito para no calcular algo incorrecto."""

@@ -40,7 +40,10 @@ Código en inglés; la UI y la documentación, en español. Este glosario es el 
 | Tipo de ausencia / regla de ausencia | `AbsenceRule` | Código configurable por empresa con su **porcentaje de pago** (`pay_ratio` entre 0 y 1: 1 = se paga completa, 0 = se descuenta completa). |
 | Resolución en cascada | `resolve_absence_ratio` | Se usa la regla más específica: contrato → grupo → empresa. Si no hay ninguna, es error; nunca un valor por defecto. |
 | Método de prorrateo | `ProrationMethod` | Cómo se prorratea el salario por ingreso o salida: `CALENDAR_FRACTION` o `COMMERCIAL_30` (ADR 0002). |
-| Licencia legal | `LegalLeave` | Licencia definida por ley: pagada por el empleador (art. 54, con máximo de días) o cubierta por subsidio (fuera del MVP). |
+| Licencia legal | `LegalLeave` | Licencia definida por ley: pagada por el empleador (art. 54, con máximo de días) o cubierta por subsidio (fuera del MVP). Los días legales se pagan siempre al 100 %; el exceso usa la cascada. **Limitación del MVP:** un evento por tipo de ausencia y periodo (p. ej. dos fallecimientos en la misma quincena cuentan como uno para el máximo legal). |
+| Origen de la regla | `RuleSource` | Nivel del que salió la regla de una línea: `CONTRACT`, `GROUP`, `COMPANY`, `LAW` (impuesta por la ley, p. ej. art. 54 al 100 %) o `SYSTEM` (regla propia del sistema, p. ej. el tope del descuento por ausencias). |
+| Tope del descuento por ausencias | `ABSENCE_DISCOUNT_CAP` | Línea que devuelve el exceso cuando las ausencias descuentan más que el salario ordinario, para que el bruto quede en 0.00. Su base es el descuento total sin topar. |
+| Error no soportado | `PayrollUnsupportedError` | Entrada válida que el MVP no soporta (p. ej. una licencia cubierta por subsidio): se rechaza explícitamente en vez de calcular algo incorrecto. |
 | Periodo de nómina | `PayrollPeriod` | Rango de fechas de una frecuencia. Estados: `open`, `calculated`, `reviewed`, `closed`. |
 | Concepto | `Concept` | Regla que produce una línea del volante. Tipos: `earning`, `deduction`, `employer_contribution`. |
 | Ingreso (percepción) | `earning` | Suma al bruto: salario ordinario, horas extra, comisiones… |

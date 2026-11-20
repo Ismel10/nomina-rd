@@ -18,6 +18,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
   licencias) y validación de la política. ADR 0002: métodos de prorrateo (#15).
 - `engine/proration.py`: forma estándar del periodo (quincenas 1–15 y 16–fin de mes; mes
   calendario) y prorrateo del salario fijo con `CALENDAR_FRACTION` y `COMMERCIAL_30` (#17).
+- `engine/payroll.py`: `calculate(inputs, tables, policy)` para salario fijo: validaciones de
+  vigencia, política, forma del periodo y salario mínimo; ausencias en cascada; licencias del
+  art. 54 (días legales al 100 % con `RuleSource.LAW`, exceso por cascada); licencias subsidiadas
+  rechazadas con `PayrollUnsupportedError`; tope del descuento por ausencias
+  (`ABSENCE_DISCOUNT_CAP`, `RuleSource.SYSTEM`) (#19).
 
 ### Cambiado
 - `AGENTS.md`: TDD obligatorio también para los casos borde descubiertos al implementar (§7), y

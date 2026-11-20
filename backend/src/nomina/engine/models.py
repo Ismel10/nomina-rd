@@ -44,6 +44,8 @@ class RuleSource(Enum):
     CONTRACT = "contract"
     GROUP = "group"
     COMPANY = "company"
+    LAW = "law"  # la regla la impone la ley (p. ej. licencias del art. 54 pagadas al 100 %)
+    SYSTEM = "system"  # regla propia del sistema (p. ej. tope del descuento por ausencias)
 
 
 class ProrationMethod(Enum):

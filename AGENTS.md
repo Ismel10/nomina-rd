@@ -9,21 +9,30 @@ Sistema de nómina **multiempresa** para una firma contable que procesa la nómi
 empresas cliente en **República Dominicana**. Es un proyecto de portafolio: se prioriza
 corrección, trazabilidad y claridad por encima de la cantidad de funciones.
 
+**Plan y análisis:** el orden de trabajo y el estado de cada paso están en
+[`docs/plan/roadmap.md`](docs/plan/roadmap.md); las lecciones de nóminas reales (anonimizadas), en
+[`docs/analisis/nominas-reales-2026.md`](docs/analisis/nominas-reales-2026.md).
+
 **MVP**
 - Empresas cliente, empleados y contratos: salario fijo mensual o pago por horas (horas resumidas
-  como novedad del periodo); pago quincenal o mensual. La forma de pagar (ausencias, grupos,
-  tarifas, prorrateo) la configura cada empresa en su política de pago, no el código.
-- Motor de cálculo: salario ordinario, horas extra, retenciones de ley del empleado (AFP, SFS, ISR),
-  aportes patronales (AFP, SFS, SRL, INFOTEP) y descuentos voluntarios simples (préstamo, anticipo).
+  como novedad del periodo); pago quincenal, mensual o mensual con adelanto quincenal. La forma de
+  pagar (ausencias, grupos, tarifas, prorrateo, incluidos los días laborados como dato y el pago sin
+  prorrateo) la configura cada empresa en su política de pago, y algunas reglas cada contrato; no el
+  código.
+- Motor de cálculo: salario ordinario, ingresos recurrentes por contrato (incentivo fijo), horas
+  extra, nocturnidad y feriados trabajados, retenciones de ley del empleado (AFP, SFS, ISR, con
+  exención del ISR solo con motivo, vigencia y auditoría), per cápita adicional, aportes patronales
+  (AFP, SFS, SRL, INFOTEP), préstamos con cuota y saldo, y descuentos voluntarios simples (anticipo).
 - Ciclo del periodo `abierto → calculado → revisado → cerrado`; correcciones con ajustes posteriores.
 - Volante de pago en PDF y archivo de dispersión bancaria (CSV genérico).
 - Bitácora de auditoría y SPA para operar todo el flujo.
 
 **Fuera del MVP (por ahora):** archivos oficiales TSS (SUIR+) y DGII (IR-3, IR-13), formatos
-propietarios por banco, salario de Navidad y vacaciones (siguiente fase), prestaciones laborales
+propietarios por banco, salario de Navidad y vacaciones (siguiente fase; las vacaciones con
+**prioridad alta**, porque las nóminas reales las usan de forma habitual), prestaciones laborales
 (preaviso, cesantía), bonificación (participación en beneficios), multimoneda, SSO, portal del empleado,
 jornada parcial, jornada reducida de trabajos peligrosos, licencias cubiertas por subsidio (SISALRIL)
-y prorrateo por días laborables (requiere calendario de feriados).
+y prorrateo por días laborables calculados con un calendario de feriados.
 
 ## 2. Dominio y glosario
 
@@ -44,6 +53,11 @@ Código en inglés; la UI y la documentación, en español. Este glosario es el 
 | Origen de la regla | `RuleSource` | Nivel del que salió la regla de una línea: `CONTRACT`, `GROUP`, `COMPANY`, `LAW` (impuesta por la ley, p. ej. art. 54 al 100 %) o `SYSTEM` (regla propia del sistema, p. ej. el tope del descuento por ausencias). |
 | Tope del descuento por ausencias | `ABSENCE_DISCOUNT_CAP` | Línea que devuelve el exceso cuando las ausencias descuentan más que el salario ordinario, para que el bruto quede en 0.00. Su base es el descuento total sin topar. |
 | Error no soportado | `PayrollUnsupportedError` | Entrada válida que el MVP no soporta (p. ej. una licencia cubierta por subsidio): se rechaza explícitamente en vez de calcular algo incorrecto. |
+| Ingreso recurrente | — (paso 2d) | Ingreso fijo definido en el contrato (p. ej. un incentivo) que se paga cada periodo o solo en algunos (p. ej. la primera quincena). |
+| Per cápita adicional | — (paso 3) | Descuento al empleado por dependientes adicionales en el seguro de salud (SFS). Reduce la base del ISR (`TODO(verificar-normativa)`). |
+| Exención del ISR | — (paso 4) | Exención de la retención del ISR de un empleado. Solo existe con motivo obligatorio, vigencia y registro en la auditoría; nunca un ISR en 0 sin explicación. |
+| Préstamo | — (paso 5b) | Préstamo al empleado con cuota por quincena y saldo. En una nómina mensual se descuenta la suma de las cuotas del mes; nunca más que el saldo. |
+| Nómina mensual con adelanto | — (paso 7b) | Nómina que se calcula por mes completo y se paga en dos partes: un adelanto en la primera quincena y el resto al final. El adelanto es un pago, no un periodo de cálculo. |
 | Periodo de nómina | `PayrollPeriod` | Rango de fechas de una frecuencia. Estados: `open`, `calculated`, `reviewed`, `closed`. |
 | Concepto | `Concept` | Regla que produce una línea del volante. Tipos: `earning`, `deduction`, `employer_contribution`. |
 | Ingreso (percepción) | `earning` | Suma al bruto: salario ordinario, horas extra, comisiones… |

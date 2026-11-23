@@ -29,3 +29,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
   reglas de no desviarse ni ampliar el alcance sin preguntar (§8) (#5).
 - `AGENTS.md`: MVP con pago por horas y configuración por empresa, glosario de la política de pago,
   vigencia de la política y firma `calculate(inputs, tables, policy)` (#15).
+- Plan de desarrollo actualizado con el análisis de dos nóminas reales (anonimizado):
+  `docs/plan/roadmap.md` y `docs/analisis/nominas-reales-2026.md`. `AGENTS.md`: MVP ampliado
+  (días laborados, sin prorrateo, ingresos recurrentes, nocturnidad y feriados, per cápita
+  adicional, exención del ISR con auditoría, préstamos con saldo, nómina mensual con adelanto),
+  vacaciones con prioridad alta en la fase siguiente y glosario nuevo (#21).

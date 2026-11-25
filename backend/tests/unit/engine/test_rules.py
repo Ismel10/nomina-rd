@@ -17,10 +17,11 @@ from nomina.engine.models import (
     EmployeeGroup,
     LaborLimitsTable,
     PayrollPolicy,
+    ProrationMethod,
     RateTables,
     RuleSource,
 )
-from nomina.engine.rules import resolve_absence_ratio, validate_policy
+from nomina.engine.rules import resolve_absence_ratio, resolve_proration_method, validate_policy
 
 UNJUSTIFIED = "UNJUSTIFIED"
 
@@ -125,3 +126,25 @@ def test_validate_policy_rechaza_categoria_de_minimo_inexistente(
 ) -> None:
     with pytest.raises(PayrollConfigError, match="ZONAS_FRANCAS"):
         validate_policy(make_policy(minimum_wage_category="ZONAS_FRANCAS"), make_tables())
+
+
+# --------------------------------------------------------------------------- método de prorrateo
+
+
+def test_metodo_de_prorrateo_de_la_empresa_si_el_contrato_no_tiene(
+    make_policy: Callable[..., PayrollPolicy], make_contract: Callable[..., ContractInput]
+) -> None:
+    policy = make_policy(proration_method=ProrationMethod.WORKING_DAYS)
+    resolved = resolve_proration_method(make_contract(), policy)
+    assert resolved.method is ProrationMethod.WORKING_DAYS
+    assert resolved.source is RuleSource.COMPANY
+
+
+def test_metodo_de_prorrateo_del_contrato_gana_sobre_el_de_la_empresa(
+    make_policy: Callable[..., PayrollPolicy], make_contract: Callable[..., ContractInput]
+) -> None:
+    policy = make_policy(proration_method=ProrationMethod.CALENDAR_FRACTION)
+    contract = make_contract(proration_method=ProrationMethod.NO_PRORATION)
+    resolved = resolve_proration_method(contract, policy)
+    assert resolved.method is ProrationMethod.NO_PRORATION
+    assert resolved.source is RuleSource.CONTRACT

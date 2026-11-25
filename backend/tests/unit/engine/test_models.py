@@ -387,3 +387,39 @@ def test_resultado_sin_lineas_tiene_totales_en_cero() -> None:
         Decimal("0.00"),
     )
     assert str(result.net) == "0.00"
+
+
+# ------------------------------------------------------------------- working_days (ADR 0003)
+
+_Q1 = PayPeriod(date(2026, 3, 1), date(2026, 3, 15), date(2026, 3, 15), PayFrequency.BIWEEKLY)
+
+
+@pytest.mark.parametrize("days", ["7", "5.5", "0.5", "13.0"])
+def test_working_days_acepta_positivos_en_multiplos_de_medio_dia(
+    make_contract: Callable[..., ContractInput], days: str
+) -> None:
+    inputs = PayrollInput(_Q1, make_contract(), working_days=Decimal(days))
+    assert inputs.working_days == Decimal(days)
+
+
+@pytest.mark.parametrize("days", ["0", "-1", "0.25", "7.3", "NaN"])
+def test_working_days_rechaza_no_positivos_y_fracciones_que_no_son_medio_dia(
+    make_contract: Callable[..., ContractInput], days: str
+) -> None:
+    with pytest.raises(PayrollInputError):
+        PayrollInput(_Q1, make_contract(), working_days=Decimal(days))
+
+
+def test_working_days_rechaza_float(make_contract: Callable[..., ContractInput]) -> None:
+    with pytest.raises(TypeError):
+        PayrollInput(_Q1, make_contract(), working_days=7.0)  # type: ignore[arg-type]
+
+
+def test_working_days_es_opcional(make_contract: Callable[..., ContractInput]) -> None:
+    assert PayrollInput(_Q1, make_contract()).working_days is None
+
+
+def test_contrato_sin_metodo_de_prorrateo_propio(
+    make_contract: Callable[..., ContractInput],
+) -> None:
+    assert make_contract().proration_method is None

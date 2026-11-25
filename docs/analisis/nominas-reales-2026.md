@@ -36,7 +36,7 @@ Ejemplos ficticios (mensual RD$30,000.00, divisor 23.83):
 
 | # | Hallazgo | Decisión / tratamiento | Paso |
 |---|---|---|---|
-| 1 | **Prorrateo por días laborados**, casi siempre `salario diario × días laborados`, con medios días (5.5, 8.5, 10.5; el sábado vale medio día). A veces `/30`. | Los días se cuentan a mano y **llegan como dato**: no hace falta calendario. Nuevo método `WORKED_DAYS`. Ejemplo: 10.5 días × 1,258.917331… = 13,218.631976… → **13,218.63**. | 2c |
+| 1 | **Prorrateo por días laborados**, casi siempre `salario diario × días laborados`, con medios días (5.5, 8.5, 10.5; el sábado vale medio día). A veces `/30`. | Los días se cuentan a mano y **llegan como dato**: no hace falta calendario. Nuevo método `WORKING_DAYS` (días laborables del tramo con contrato, sin restar ausencias; ADR 0003). Ejemplo: 10.5 días × 1,258.917331… = 13,218.631976… → **13,218.63**. | 2c |
 | 2 | **Sin prorrateo por contrato:** hay contratos que pagan la quincena completa aunque el empleado entre a mitad; en la misma empresa, otros sí se prorratean. | Método `NO_PRORATION` y método configurable **por contrato**, por encima del de la empresa. **Pendiente:** ¿también se paga completa si sale a mitad? | 2c |
 | 3 | **Base de la TSS por concepto:** en las dos empresas, AFP y SFS se calculan **solo sobre el sueldo base**; incentivos, horas extra, nocturnidad y feriados no cotizan. El ISR sí incluye incentivos y horas extra. | Marca "cotiza TSS" y "grava ISR" **por concepto**, configurable. **Pendiente:** confirmar que es correcto según la ley (`TODO(verificar-normativa)`). | 3, 4 |
 | 4 | **Nocturnidad:** salario diario × noches × 15 % (art. 204). | Recargo mínimo legal en tabla. Ejemplo: 1,258.917331… × 3 × 0.15 = 566.512798… → **566.51**. | 5 |

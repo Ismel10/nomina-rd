@@ -1,15 +1,19 @@
 """Cálculo de la nómina de un contrato en un periodo: `calculate(inputs, tables, policy)`.
 
-Función pura y determinista (AGENTS.md §4). En este paso: salario fijo (`FIXED_SALARY`) con
-prorrateo (ADR 0002), ausencias resueltas en cascada, licencias del art. 54 y validaciones.
+Función pura y determinista (AGENTS.md §4). Salario fijo (`FIXED_SALARY`) con prorrateo (ADR
+0002 y 0003), ausencias resueltas en cascada, licencias del art. 54 y validaciones.
 
 Orden:
 1. Vigencia de la política y de las tablas en la fecha de pago; `validate_policy`; forma del
    periodo; salario mensual no menor que el mínimo mensual de la categoría.
-2. Días calendario con contrato vigente. Sin días: sin líneas (o error si hay novedades).
+2. Días calendario con contrato vigente. Sin días: sin líneas (o error si hay novedades o
+   `working_days`).
 3. Ausencias: no pueden sumar más días que los días calendario con contrato (todos los tipos).
-4. `ORDINARY_SALARY` prorrateado y una línea por ausencia (art. 54: días legales por ley al 100 %
-   y exceso por cascada). Cada línea se redondea una sola vez con `round_line` (ADR 0001).
+4. `ORDINARY_SALARY` con el método del contrato o, si no tiene, el de la política:
+   `CALENDAR_FRACTION` / `COMMERCIAL_30` (ADR 0002); `WORKING_DAYS` (periodo completo = salario del
+   periodo; parcial = salario diario x `working_days`) y `NO_PRORATION` (ADR 0003). Después, una
+   línea por ausencia (art. 54: días legales por ley al 100 % y exceso por cascada). Cada línea se
+   redondea una sola vez con `round_line` (ADR 0001).
 5. Si el descuento por ausencias supera el salario ordinario, `ABSENCE_DISCOUNT_CAP` lo devuelve
    hasta dejar el bruto en 0.00 (regla del sistema).
 """
@@ -31,12 +35,13 @@ from nomina.engine.models import (
 )
 from nomina.engine.money import round_line, sum_lines
 from nomina.engine.proration import (
+    is_full_period,
     period_salary,
     prorated_salary,
     service_days,
     validate_period_shape,
 )
-from nomina.engine.rules import resolve_absence_ratio, validate_policy
+from nomina.engine.rules import resolve_absence_ratio, resolve_proration_method, validate_policy
 
 ORDINARY_SALARY = "ORDINARY_SALARY"
 ABSENCE_DISCOUNT_CAP = "ABSENCE_DISCOUNT_CAP"
@@ -58,7 +63,7 @@ def calculate(inputs: PayrollInput, tables: RateTables, policy: PayrollPolicy) -
 
     calendar_days = service_days(period, contract, ProrationMethod.CALENDAR_FRACTION)
     if calendar_days == 0:
-        if inputs.absences:
+        if inputs.absences or inputs.working_days is not None:
             raise PayrollInputError(
                 f"{contract.contract_id}: hay novedades pero el contrato no tiene días "
                 "en el periodo"
@@ -72,20 +77,9 @@ def calculate(inputs: PayrollInput, tables: RateTables, policy: PayrollPolicy) -
             "en el periodo"
         )
 
-    method = policy.proration_method
-    salary = PayrollLine(
-        code=ORDINARY_SALARY,
-        kind=ConceptKind.EARNING,
-        quantity=Decimal(service_days(period, contract, method)),
-        base=period_salary(period, contract),
-        rate=None,
-        amount=round_line(prorated_salary(period, contract, method)),
-        rule_source=RuleSource.COMPANY,
-        policy_version=policy.version,
-        table_version=None,
-    )
-
     daily_salary = contract.monthly_salary / policy.daily_salary_divisor
+    salary = _ordinary_salary(inputs, policy, daily_salary, calendar_days, absence_days)
+
     absence_lines: list[PayrollLine] = []
     for absence in inputs.absences:
         absence_lines.extend(_absence_lines(absence, inputs, tables, policy, daily_salary))
@@ -107,6 +101,85 @@ def calculate(inputs: PayrollInput, tables: RateTables, policy: PayrollPolicy) -
             )
         )
     return PayrollResult(contract.contract_id, period, tuple(lines))
+
+
+def _ordinary_salary(
+    inputs: PayrollInput,
+    policy: PayrollPolicy,
+    daily_salary: Decimal,
+    calendar_days: int,
+    absence_days: Decimal,
+) -> PayrollLine:
+    """Línea `ORDINARY_SALARY` según el método resuelto (contrato → empresa; ADR 0002 y 0003)."""
+    period, contract = inputs.period, inputs.contract
+    resolved = resolve_proration_method(contract, policy)
+    method = resolved.method
+    full_salary = period_salary(period, contract)
+    full = is_full_period(period, contract)
+    uses_working_days = method is ProrationMethod.WORKING_DAYS and not full
+
+    # Regla única (ADR 0003): working_days solo es válido con WORKING_DAYS en un periodo parcial.
+    # En cualquier otro caso (otro método o periodo completo) el dato no se usaría, y un dato que
+    # no se usa no se ignora en silencio. Un método nuevo queda cubierto automáticamente.
+    if inputs.working_days is not None and not uses_working_days:
+        raise PayrollInputError(
+            f"{contract.contract_id}: working_days solo aplica con WORKING_DAYS en un periodo "
+            f"parcial (método {method.name}, periodo {'completo' if full else 'parcial'})"
+        )
+
+    quantity: Decimal | None
+    if method in (ProrationMethod.CALENDAR_FRACTION, ProrationMethod.COMMERCIAL_30):
+        quantity = Decimal(service_days(period, contract, method))
+        base, exact = full_salary, prorated_salary(period, contract, method)
+    elif method is ProrationMethod.NO_PRORATION:
+        if contract.end_date is not None and contract.end_date < period.end:
+            raise PayrollUnsupportedError(
+                f"{contract.contract_id}: salida a mitad de periodo con NO_PRORATION; regla "
+                "pendiente de confirmar con la firma (#27, ADR 0003)"
+            )
+        quantity, base, exact = None, full_salary, full_salary
+    elif full:  # WORKING_DAYS en periodo completo: salario del periodo
+        quantity, base, exact = None, full_salary, full_salary
+    else:  # WORKING_DAYS en periodo parcial: salario diario x días laborables
+        days = _partial_working_days(inputs, calendar_days, absence_days)
+        exact = daily_salary * days
+        if exact > full_salary:
+            raise PayrollInputError(
+                f"{contract.contract_id}: los días laborables informados superan el salario "
+                "del periodo"
+            )
+        quantity, base = days, daily_salary
+
+    return PayrollLine(
+        code=ORDINARY_SALARY,
+        kind=ConceptKind.EARNING,
+        quantity=quantity,
+        base=base,
+        rate=None,
+        amount=round_line(exact),
+        rule_source=resolved.source,
+        policy_version=policy.version,
+        table_version=None,
+    )
+
+
+def _partial_working_days(
+    inputs: PayrollInput, calendar_days: int, absence_days: Decimal
+) -> Decimal:
+    """Valida `working_days` en un periodo parcial con `WORKING_DAYS` (ADR 0003)."""
+    contract_id = inputs.contract.contract_id
+    days = inputs.working_days
+    if days is None:
+        raise PayrollInputError(
+            f"{contract_id}: falta working_days para un periodo parcial con WORKING_DAYS"
+        )
+    if days > calendar_days:
+        raise PayrollInputError(
+            f"{contract_id}: working_days supera los días calendario con contrato en el periodo"
+        )
+    if absence_days > days:
+        raise PayrollInputError(f"{contract_id}: los días de ausencia superan working_days")
+    return days
 
 
 def _validate(inputs: PayrollInput, tables: RateTables, policy: PayrollPolicy) -> None:

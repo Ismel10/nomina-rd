@@ -50,6 +50,23 @@ def validate_period_shape(period: PayPeriod) -> None:
         )
 
 
+def is_full_period(period: PayPeriod, contract: ContractInput) -> bool:
+    """Indica si el contrato cubre el periodo completo (sin ingreso ni salida a mitad)."""
+    starts_before = contract.start_date <= period.start
+    ends_after = contract.end_date is None or contract.end_date >= period.end
+    return starts_before and ends_after
+
+
+_DAY_COUNTING_METHODS = (ProrationMethod.CALENDAR_FRACTION, ProrationMethod.COMMERCIAL_30)
+
+
+def _require_day_counting(method: ProrationMethod) -> None:
+    """`WORKING_DAYS` y `NO_PRORATION` no se calculan contando días del periodo (ADR 0003); se
+    rechazan para que nunca caigan en silencio en la rama de `COMMERCIAL_30`."""
+    if method not in _DAY_COUNTING_METHODS:
+        raise ValueError(f"{method.name}: no se calcula contando días del periodo (ADR 0003)")
+
+
 def _commercial_index(day: date) -> int:
     if day == _last_day_of_month(day):
         return _COMMERCIAL_MONTH
@@ -58,6 +75,7 @@ def _commercial_index(day: date) -> int:
 
 def period_days(period: PayPeriod, method: ProrationMethod) -> int:
     """Días del periodo según el método: calendario, o 30 (mensual) / 15 (quincenal)."""
+    _require_day_counting(method)
     validate_period_shape(period)
     if method is ProrationMethod.CALENDAR_FRACTION:
         return (period.end - period.start).days + 1
@@ -69,6 +87,7 @@ def period_days(period: PayPeriod, method: ProrationMethod) -> int:
 def service_days(period: PayPeriod, contract: ContractInput, method: ProrationMethod) -> int:
     """Días con contrato vigente dentro del periodo, contados según el método. 0 si el contrato
     no se superpone con el periodo."""
+    _require_day_counting(method)
     validate_period_shape(period)
     first = max(period.start, contract.start_date)
     last = period.end if contract.end_date is None else min(period.end, contract.end_date)
@@ -88,5 +107,6 @@ def period_salary(period: PayPeriod, contract: ContractInput) -> Decimal:
 
 def prorated_salary(period: PayPeriod, contract: ContractInput, method: ProrationMethod) -> Decimal:
     """Salario del periodo x días de servicio ÷ días del periodo, a precisión completa."""
+    _require_day_counting(method)
     salary = period_salary(period, contract)
     return salary * service_days(period, contract, method) / period_days(period, method)

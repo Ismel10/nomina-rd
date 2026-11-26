@@ -17,6 +17,7 @@ from nomina.engine.errors import PayrollInputError
 from nomina.engine.models import ContractInput, PayFrequency, PayPeriod, ProrationMethod
 from nomina.engine.money import round_line
 from nomina.engine.proration import (
+    is_full_period,
     period_days,
     period_salary,
     prorated_salary,
@@ -248,3 +249,42 @@ def test_salida_el_primer_dia_del_periodo_cuenta_un_dia(
 ) -> None:
     contract = make_contract(end_date=date(2026, 3, 16))
     assert service_days(MAR_Q2, contract, method) == 1
+
+
+# --------------------------------------------------------------- periodo completo (ADR 0003)
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "expected"),
+    [
+        (ANTES, None, True),  # cubre todo el periodo
+        (date(2026, 3, 1), None, True),  # ingresa el primer día del periodo
+        (ANTES, date(2026, 3, 15), True),  # sale el último día del periodo
+        (date(2026, 3, 6), None, False),  # ingreso a mitad
+        (ANTES, date(2026, 3, 10), False),  # salida a mitad
+        (date(2026, 3, 3), date(2026, 3, 12), False),  # ingreso y salida a mitad
+    ],
+)
+def test_is_full_period(
+    make_contract: Callable[..., ContractInput], start: date, end: date | None, expected: bool
+) -> None:
+    contract = make_contract(start_date=start, end_date=end)
+    assert is_full_period(MAR_Q1, contract) is expected
+
+
+# --------------------------------------------------------------------------- guarda de métodos
+
+
+@pytest.mark.parametrize("method", [ProrationMethod.WORKING_DAYS, ProrationMethod.NO_PRORATION])
+def test_funciones_de_dias_rechazan_metodos_que_no_cuentan_dias(
+    make_contract: Callable[..., ContractInput], method: ProrationMethod
+) -> None:
+    """WORKING_DAYS y NO_PRORATION no se calculan contando días del periodo (ADR 0003): estas
+    funciones no deben caer en silencio en la rama de COMMERCIAL_30."""
+    contract = make_contract(start_date=date(2026, 3, 6))
+    with pytest.raises(ValueError, match=method.name):
+        service_days(MAR_Q1, contract, method)
+    with pytest.raises(ValueError, match=method.name):
+        period_days(MAR_Q1, method)
+    with pytest.raises(ValueError, match=method.name):
+        prorated_salary(MAR_Q1, contract, method)

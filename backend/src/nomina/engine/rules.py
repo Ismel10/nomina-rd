@@ -8,7 +8,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from nomina.engine.errors import PayrollConfigError
-from nomina.engine.models import ContractInput, PayrollPolicy, RateTables, RuleSource
+from nomina.engine.models import (
+    ContractInput,
+    PayrollPolicy,
+    ProrationMethod,
+    RateTables,
+    RuleSource,
+)
 
 
 @dataclass(frozen=True)
@@ -51,6 +57,24 @@ def resolve_absence_ratio(
         f"{contract.contract_id}: no hay regla para el tipo de ausencia '{absence_type}' "
         f"(ni en el contrato, ni en su grupo, ni en la política {policy.version})"
     )
+
+
+@dataclass(frozen=True)
+class ResolvedProration:
+    """Método de prorrateo resuelto y el nivel del que salió (contrato o empresa)."""
+
+    method: ProrationMethod
+    source: RuleSource
+
+
+def resolve_proration_method(contract: ContractInput, policy: PayrollPolicy) -> ResolvedProration:
+    """Método de prorrateo del contrato si lo tiene; si no, el de la política (ADR 0003).
+
+    Solo dos niveles (contrato → empresa): no hay método por grupo.
+    """
+    if contract.proration_method is not None:
+        return ResolvedProration(contract.proration_method, RuleSource.CONTRACT)
+    return ResolvedProration(policy.proration_method, RuleSource.COMPANY)
 
 
 def validate_policy(policy: PayrollPolicy, tables: RateTables) -> None:

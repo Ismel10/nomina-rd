@@ -23,6 +23,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
   art. 54 (días legales al 100 % con `RuleSource.LAW`, exceso por cascada); licencias subsidiadas
   rechazadas con `PayrollUnsupportedError`; tope del descuento por ausencias
   (`ABSENCE_DISCOUNT_CAP`, `RuleSource.SYSTEM`) (#19).
+- Métodos de prorrateo `WORKING_DAYS` (días laborables del tramo como dato, sin restar ausencias;
+  periodo completo = salario del periodo) y `NO_PRORATION` (salida a mitad aún no soportada), y
+  método por contrato por encima del de la empresa. ADR 0003 (#22).
 
 ### Cambiado
 - `AGENTS.md`: TDD obligatorio también para los casos borde descubiertos al implementar (§7), y

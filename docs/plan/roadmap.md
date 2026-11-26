@@ -26,7 +26,7 @@ backlog original del MVP y lo aprendido del análisis de nóminas reales
 | 2a-1 | Modelos, política de pago, grupos, cascada de reglas, ADR 0002 | ✅ | #15 / #16 |
 | 2a-2 (i) | Forma del periodo y prorrateo (`CALENDAR_FRACTION`, `COMMERCIAL_30`) | ✅ | #17 / #18 |
 | 2a-2 (ii) | `calculate` con salario fijo, ausencias, art. 54 y tope | ✅ | #19 / #20 |
-| **2c** | **Métodos de prorrateo** `WORKED_DAYS` (días laborados como dato, con medios días) y `NO_PRORATION` (periodo completo); método configurable **por contrato**, por encima del de la empresa. **ADR 0003** (amplía el ADR 0002). | ⏳ | #22 |
+| **2c** | **Métodos de prorrateo** `WORKING_DAYS` (días laborables del tramo con contrato como dato, con medios días, sin restar ausencias) y `NO_PRORATION` (periodo completo); método configurable **por contrato**, por encima del de la empresa. **ADR 0003** (amplía el ADR 0002). | ⏳ | #22 |
 | 2b | Pago por horas (`HOURLY`): horas × tarifa resuelta en cascada (contrato → grupo → empresa); tarifa no menor que el mínimo por hora derivado de la política | ⏳ | sin issue |
 | **2d** | **Ingresos recurrentes por contrato** (incentivo fijo): monto fijo, cada periodo o solo en la primera quincena | ⏳ | #23 |
 | 3 | TSS (ver detalle) | ⏳ | sin issue |

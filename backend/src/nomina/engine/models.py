@@ -53,6 +53,8 @@ class ProrationMethod(Enum):
 
     CALENDAR_FRACTION = "calendar_fraction"
     COMMERCIAL_30 = "commercial_30"
+    WORKING_DAYS = "working_days"  # días laborables como dato; solo periodos parciales (ADR 0003)
+    NO_PRORATION = "no_proration"  # periodo completo aunque el ingreso sea a mitad (ADR 0003)
 
 
 class LeaveCategory(Enum):
@@ -173,7 +175,8 @@ class PayPeriod:
 class ContractInput:
     """Contrato tal como lo necesita el motor. `monthly_salary` es siempre mensual para
     `FIXED_SALARY` (la quincena es mensual ÷ 2). `absence_rules` son excepciones del contrato,
-    primer nivel de la cascada."""
+    primer nivel de la cascada. `proration_method`, si existe, gana sobre el de la política
+    (ADR 0003)."""
 
     contract_id: str
     scheme: PayScheme
@@ -182,6 +185,7 @@ class ContractInput:
     end_date: date | None = None
     group_code: str | None = None
     absence_rules: tuple[AbsenceRule, ...] = ()
+    proration_method: ProrationMethod | None = None
 
     def __post_init__(self) -> None:
         _positive(self.monthly_salary, "ContractInput.monthly_salary", PayrollInputError)
@@ -203,10 +207,18 @@ class PayrollInput:
     period: PayPeriod
     contract: ContractInput
     absences: tuple[Absence, ...] = ()
+    working_days: Decimal | None = None
+    """Días laborables del tramo con contrato dentro del periodo, SIN restar ausencias (lunes a
+    viernes = 1, sábado = 0.5, domingo = 0). Solo para `WORKING_DAYS` en periodos parciales;
+    las ausencias llegan aparte en `absences` (ADR 0003)."""
 
     def __post_init__(self) -> None:
         _freeze(self, "absences")
         _unique((a.absence_type for a in self.absences), "Novedad de ausencia", PayrollInputError)
+        if self.working_days is not None:
+            days = _positive(self.working_days, "PayrollInput.working_days", PayrollInputError)
+            if (days * 2) % 1 != 0:
+                raise PayrollInputError("PayrollInput.working_days: debe ir en múltiplos de 0.5")
 
 
 # --------------------------------------------------------------------------- política de la empresa
